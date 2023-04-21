@@ -20,7 +20,7 @@ A legend showing the depth and their corresponding color
 
 Data points scale with magnitude level 
 
-Data points colors change with depth level
+Data points colors change with depth level (I cannot get mine to color change)
 
 Each point has a tooltip with the Magnitude, the location and depth
 
