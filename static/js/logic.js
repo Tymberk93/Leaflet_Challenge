@@ -1,147 +1,85 @@
-// Store the API endpoint as queryUrl.
-let Url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
+// Url
+let Url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson"
 
-// Perform a GET request to the query URL/
 d3.json(Url).then(function (data) {
-  // Once we get a response, send the data.features object to the createFeatures function.
-  createFeatures(data.features);
-  console.log(data);
-});
 
-function createFeatures(earthquakeData) {
-
-  // Define a function that we want to run once for each feature in the features array.
-  function onEachFeature(feature, layer) {
-    layer.bindPopup(`<h3>${feature.properties.place}</h3><hr><p>${new Date(feature.properties.time)}</p>`);
-  }
-
-  // Create a GeoJSON layer that contains the features array on the earthquakeData object.
+  let features = data.features;
+  console.log(features);
   
-  let earthquakes = L.geoJSON(earthquakeData, {
-    onEachFeature: onEachFeature
+  // Create map
+  let myMap = L.map("map", {
+    center: [40.76, -111.89],
+    zoom: 5,
+   });
 
-    }
-  );
-
-  function eMarkers(){
-    // Loop through the cities array, and create one marker for each city object.
-    for (let i = 0; i < earthquakeData.length; i++) {
+//tile layer.
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(myMap);  
+    
+   // Loop
+   for (let i = 0; i < features.length; i++) {
   
-      // Conditionals for country gdp_pc
+     let location = features[i].geometry.coordinates;
+     
+      // Conditionals 
       let color = "";
-      if (earthquakeData[i].features.geometry.coordinates[3] < 10) {
-        color = "pink";
-      }
-      else if (earthquakeData[i].features.geometry.coordinates[3] < 30) {
-        color = "yellow";
-      }
-      else if (earthquakeData[i].features.geometry.coordinates[3] < 50) {
-        color = "green";
-      }
-      else if (earthquakeData[i].features.geometry.coordinates[3] < 70) {
-        color = "blue";
-      }
-      else if (earthquakeData[i].features.geometry.coordinates[3] <90) {
-        color = "purple";
-      }
-      else {
+      if (location[2] > 90) {
         color = "red";
       }
-  
-      var lat = earthquakeData[i].features.geometry.coordinates[1];
-      var lng = earthquakeData[i].features.geometry.coordinates[1];
-  
-      // Add circles to the map.
-      L.circle([lat, lng], {
-        fillOpacity: 0.75,
-        color: "white",
+      else if (location[2] > 70) {
+        color = "darkorange";
+      }
+      else if (location[2] > 50) {
+        color = "yellow";
+      }
+      else if (location[2] > 30) {
+        color = "lightgreen";
+      }
+      else if (location[2] > 10) {
+        color = "lightblue";
+      }
+      else {
+        color = "pink";
+      }
+    
+     //create markers
+     if (location) {
+      L.circle([location[1], location[0]],{
+        fillOpacity: 0.9,
+        color: "black",
+        weight: 0.7,
         fillColor: color,
-        // Adjust the radius.
-        radius: Math.sqrt(earthquakeData[i].features.geometry.coordinates) * 50000
-      }).bindPopup(`<h3>${feature.properties.place}</h3><hr><p>${new Date(feature.properties.time)}</p>`).addTo(myMap);
-    };
-  }
+        radius: features[i].properties.mag * 10000   
+      })
+      .bindPopup(("<strong>"
+       + "Location:<br /> lat " + location[1] 
+       + "<br />long " + location[0] + "</strong><br /><br />Magnitude: " 
+       + features[i].properties.mag + "<br />Depth: " 
+       + location[2]))
+      .addTo(myMap);
+      }
+   };
 
-  // Send our earthquakes layer to the createMap function/
-  createMap(earthquakes);
-}
+// Create legend
+  let legend = L.control({position: 'bottomleft'});
+  legend.onAdd = function () {
+    let div = L.DomUtil.create('div', 'info legend');
+    let labels = [];
+    let categories = ['-10 - 10', '10 - 30', '30 - 50', '50 - 70', '70 - 90', '90 +'];
+    let colors = ['pink', 'lightblue', 'lightgreen', 'yellow', 'darkorange', 'red'];
 
-function createMap(earthquakes) {
+  for (let i = 0; i < categories.length; i++) {
+          div.innerHTML  
+          labels.push(
+              '<li style="background-color:' + colors[i] + '"</li> ' +
+              (categories[i] ? categories[i] : '+'));
+      }
+      
+      div.innerHTML += "<h1>Depth range (in Meters) <h1>" + labels.join('<br>');
+      return div;
+      };
 
-  // Create the base layers.
-  let street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-  })
+ legend.addTo(myMap);
 
-  let topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-    attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
-  });
-
-  // Create a baseMaps object.
-  let baseMaps = {
-    "Street Map": street,
-    "Topographic Map": topo
-  };
-
-  // Create an overlay object to hold our overlay.
-  let overlayMaps = {
-    Earthquakes: earthquakes
-  };
-
-  // Create our map, giving it the streetmap and earthquakes layers to display on load.
-  let myMap = L.map("map", {
-    center: [
-      39.27, -109.18
-    ],
-    zoom: 5,
-    layers: [street, earthquakes],
-    eMarkers: eMarkers
-  });
-
-  // Create a layer control.
-  // Pass it our baseMaps and overlayMaps.
-  // Add the layer control to the map.
-  L.control.layers(baseMaps, overlayMaps, {
-    collapsed: false
-  }).addTo(myMap);
-
-}
-
-function eMarkers(){
-  // Loop through the cities array, and create one marker for each city object.
-  for (let i = 0; i < earthquakeData.length; i++) {
-
-    // Conditionals for country gdp_pc
-    let color = "";
-    if (earthquakeData[i].features.geometry.coordinates[3] < 10) {
-      color = "pink";
-    }
-    else if (earthquakeData[i].features.geometry.coordinates[3] < 30) {
-      color = "yellow";
-    }
-    else if (earthquakeData[i].features.geometry.coordinates[3] < 50) {
-      color = "green";
-    }
-    else if (earthquakeData[i].features.geometry.coordinates[3] < 70) {
-      color = "blue";
-    }
-    else if (earthquakeData[i].features.geometry.coordinates[3] <90) {
-      color = "puprle";
-    }
-    else {
-      color = "red";
-    }
-
-    var lat = earthquakeData[i].features.geometry.coordinates[1];
-    var lng = earthquakeData[i].features.geometry.coordinates[1];
-
-    // Add circles to the map.
-    L.circle([lat, lng], {
-      fillOpacity: 0.75,
-      color: "white",
-      fillColor: color,
-      // Adjust the radius.
-      radius: Math.sqrt(earthquakeData[i].features.geometry.coordinates) * 50000
-    }).bindPopup(`<h3>${feature.properties.place}</h3><hr><p>${new Date(feature.properties.time)}</p>`).addTo(myMap);
-  };
-}
+});
