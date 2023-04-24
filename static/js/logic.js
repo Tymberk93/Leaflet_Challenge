@@ -76,7 +76,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
               (categories[i] ? categories[i] : '+'));
       }
       
-      div.innerHTML += "<h1>Depth range (in Meters) <h1>" + labels.join('<br>');
+      div.innerHTML += "<h1>Magnitude<h1>" + labels.join('<br>');
       return div;
       };
 
